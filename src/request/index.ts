@@ -10,6 +10,10 @@ if (existsSync(".env")) {
 
 const BASE_URL = process.env.SERVER_BASE_URL;
 
+if (!BASE_URL) {
+    throw new Error("SERVER_BASE_URL is required. Set it in .env or the environment.");
+}
+
 const getAccessToken = (): string => {
     const tokenManager = TokenManager.getInstance();
     return tokenManager.getToken() || "";
