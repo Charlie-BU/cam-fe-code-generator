@@ -1,0 +1,63 @@
+name: Publish npm package
+
+on:
+  push:
+    branches:
+      - main
+      - 'release/**'
+
+# Prevent two pushes from attempting to publish the same version concurrently.
+concurrency:
+  group: npm-publish-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  # Required by npm Trusted Publishing / provenance attestations.
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: npm
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          # Do not cache release builds: every publish should be reproducible
+          # from the lockfile and a fresh dependency install.
+          package-manager-cache: false
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test
+        run: npm test --if-present
+
+      - name: Build
+        run: npm run build --if-present
+
+      - name: Check whether this version is already published
+        id: package-version
+        shell: bash
+        run: |
+          package_name="$(node -p \"require('./package.json').name\")"
+          package_version="$(node -p \"require('./package.json').version\")"
+
+          if npm view "${package_name}@${package_version}" version >/dev/null 2>&1; then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "${package_name}@${package_version} is already published; skipping."
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+            echo "Publishing ${package_name}@${package_version}."
+          fi
+
+      - name: Publish to npm
+        if: steps.package-version.outputs.publish == 'true'
+        run: npm publish --provenance
