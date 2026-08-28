@@ -48,8 +48,8 @@ jobs:
         id: package-version
         shell: bash
         run: |
-          package_name="$(node -p \"require('./package.json').name\")"
-          package_version="$(node -p \"require('./package.json').version\")"
+          package_name="$(node -p "require('./package.json').name")"
+          package_version="$(node -p "require('./package.json').version")"
 
           if npm view "${package_name}@${package_version}" version >/dev/null 2>&1; then
             echo "publish=false" >> "$GITHUB_OUTPUT"
