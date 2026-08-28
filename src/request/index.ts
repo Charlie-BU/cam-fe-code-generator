@@ -1,6 +1,7 @@
 import axios, { AxiosHeaders } from "axios";
 import { existsSync } from "node:fs";
 import type { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
+import { BUILD_SERVER_BASE_URL } from "../build-config";
 import { TokenManager } from "../utils/data-manager";
 import { UserProfile } from "../services/apis/user/types";
 
@@ -8,7 +9,9 @@ if (existsSync(".env")) {
     process.loadEnvFile(".env");
 }
 
-const BASE_URL = process.env.SERVER_BASE_URL;
+// Runtime configuration takes precedence for private deployments; the release
+// workflow injects the production default into BUILD_SERVER_BASE_URL.
+const BASE_URL = process.env.SERVER_BASE_URL || BUILD_SERVER_BASE_URL;
 
 if (!BASE_URL) {
     throw new Error("SERVER_BASE_URL is required. Set it in .env or the environment.");

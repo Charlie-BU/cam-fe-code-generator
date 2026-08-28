@@ -26,3 +26,4 @@ coverage
 *.sw?
 .env
 .env.*
+src/build-config.ts

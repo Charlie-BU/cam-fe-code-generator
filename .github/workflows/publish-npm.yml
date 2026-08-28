@@ -21,6 +21,10 @@ jobs:
     # Must match the Environment name configured for this package's npm
     # Trusted Publisher.
     environment: npm
+    env:
+      # An environment variable is only available to the runner; inject it
+      # into the compiled CLI so package consumers do not need to define it.
+      SERVER_BASE_URL: ${{ vars.SERVER_BASE_URL }}
 
     steps:
       - name: Check out source

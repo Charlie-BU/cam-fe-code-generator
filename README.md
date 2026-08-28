@@ -75,7 +75,7 @@ src/cam-auto-generate/
 
 ## 服务端地址
 
-当前 CLI 的服务端地址定义在 `src/request/index.ts` 的 `BASE_URL`。私有部署或本地联调时，请在发布前将其改为目标 CAM API 根地址并重新构建；修改后应验证登录、拉取 Service 和生成代码三条链路。
+发布工作流会从 GitHub `npm` Environment 的 `SERVER_BASE_URL` 变量注入默认服务端地址，安装 CLI 的用户无需配置该变量。私有部署或本地联调可在项目根目录的 `.env` 中设置 `SERVER_BASE_URL`，或直接设置同名环境变量；它会覆盖发布包中的默认地址。
 
 ## 本地开发
 
