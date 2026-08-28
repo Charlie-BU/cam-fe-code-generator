@@ -1,10 +1,14 @@
 import axios, { AxiosHeaders } from "axios";
+import { existsSync } from "node:fs";
 import type { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
 import { TokenManager } from "../utils/data-manager";
 import { UserProfile } from "../services/apis/user/types";
 
-const BASE_URL = "https://cam-api.com/api";
-// const BASE_URL = "http://0.0.0.0:1024";
+if (existsSync(".env")) {
+    process.loadEnvFile(".env");
+}
+
+const BASE_URL = process.env.SERVER_BASE_URL;
 
 const getAccessToken = (): string => {
     const tokenManager = TokenManager.getInstance();
