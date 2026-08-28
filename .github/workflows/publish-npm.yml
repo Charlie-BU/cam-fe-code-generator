@@ -18,6 +18,9 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # Must match the Environment name configured for this package's npm
+    # Trusted Publisher.
+    environment: npm
 
     steps:
       - name: Check out source
