@@ -97,6 +97,18 @@ cam --help
 
 ## 发布 npm
 
+发布由 GitHub Actions 通过 npm Trusted Publishing 执行；本地不需要 npm token。运行以下脚本会校验干净的 `main` 工作区、递增版本、创建 `release/<版本>-<时间戳>` 分支、构建并检查 tarball，再提交和推送该分支：
+
+```bash
+./publish.sh                 # 默认递增 patch，例如 1.9.0 -> 1.9.1
+./publish.sh minor           # 递增 minor
+./publish.sh major           # 递增 major
+```
+
+脚本仅接受 `patch`、`minor`、`major`，只允许从 `main` 分支运行，且需要本机已安装 pnpm。推送成功后请在 GitHub Actions 中确认工作流完成；同一版本已存在时工作流会跳过发布。
+
+本地手动发布（通常不需要）可使用：
+
 ```bash
 npm run build
 npm pack --dry-run
