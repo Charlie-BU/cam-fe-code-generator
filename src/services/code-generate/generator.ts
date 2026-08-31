@@ -54,55 +54,54 @@ const generateInterface = (
     const fields: string[] = [];
     const interfaceName = `${capitalizeFirstLetter(name)}`;
 
+    const paramsByName = new Map<string, any[]>();
     params.forEach((param) => {
-        let type = tsTypeMap(param.type, param.array_child_type);
-        const fieldName = param.name;
+        const variants = paramsByName.get(param.name) || [];
+        variants.push(param);
+        paramsByName.set(param.name, variants);
+    });
+
+    paramsByName.forEach((variants, fieldName) => {
         const formattedFieldName = formatInterfaceFieldName(fieldName);
-        const isOptional = !param.required;
-        const comment = param.description
-            ? `  /** ${param.description} */\n`
-            : "";
+        const isOptional = !variants[0].required;
+        // 前端会限制冲突数据；这里仍以第一个非空说明兜底，以兼容历史数据。
+        const description = variants.find((param) => param.description)?.description;
+        const comment = description ? `  /** ${description} */\n` : "";
+        const types: string[] = [];
 
-        if (
-            param.type === "object" &&
-            param.children_params &&
-            param.children_params.length > 0
-        ) {
-            // 添加interfaceName前缀防止命名冲突
-            const childInterfaceName = `${interfaceName}${capitalizeFirstLetter(
-                fieldName
-            )}`;
-            const childInterfaces = generateInterface(
-                childInterfaceName,
-                param.children_params,
-                interfaceName
-            );
-            interfaces.push(...childInterfaces);
-            type = childInterfaceName; // Use the generated interface name
-        } else if (
-            param.type === "array" &&
-            param.array_child_type === "object" &&
-            param.children_params &&
-            param.children_params.length > 0
-        ) {
-            // Handle array of objects if needed
-            // 添加interfaceName前缀防止命名冲突
-            const childInterfaceName = `${interfaceName}${capitalizeFirstLetter(
-                fieldName
-            )}Item`;
-            const childInterfaces = generateInterface(
-                childInterfaceName,
-                param.children_params,
-                interfaceName
-            );
-            interfaces.push(...childInterfaces);
-            type = `${childInterfaceName}[]`;
-        }
+        variants.forEach((param) => {
+            let type = tsTypeMap(param.type, param.array_child_type);
+            const children = param.children_params || [];
+            if (param.type === "object" && children.length > 0) {
+                const childInterfaceName = `${interfaceName}${capitalizeFirstLetter(
+                    fieldName
+                )}`;
+                type = childInterfaceName;
+                if (!types.includes(type)) {
+                    interfaces.push(
+                        ...generateInterface(childInterfaceName, children, interfaceName)
+                    );
+                }
+            } else if (
+                param.type === "array" &&
+                param.array_child_type === "object" &&
+                children.length > 0
+            ) {
+                const childInterfaceName = `${interfaceName}${capitalizeFirstLetter(
+                    fieldName
+                )}Item`;
+                type = `${childInterfaceName}[]`;
+                if (!types.includes(type)) {
+                    interfaces.push(
+                        ...generateInterface(childInterfaceName, children, interfaceName)
+                    );
+                }
+            }
+            if (!types.includes(type)) types.push(type);
+        });
 
-        if (param.nullable === true) {
-            type = `${type} | null`;
-        }
-
+        let type = types.join(" | ");
+        if (variants[0].nullable === true) type = `${type} | null`;
         fields.push(
             `${comment}  ${formattedFieldName}${isOptional ? "?" : ""}: ${type};`
         );
