@@ -99,6 +99,10 @@ const generateInterface = (
             type = `${childInterfaceName}[]`;
         }
 
+        if (param.nullable === true) {
+            type = `${type} | null`;
+        }
+
         fields.push(
             `${comment}  ${formattedFieldName}${isOptional ? "?" : ""}: ${type};`
         );

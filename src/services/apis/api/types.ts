@@ -53,6 +53,7 @@ export interface RequestParam {
     location: ParamLocation;
     type: ParamType;
     required: boolean;
+    nullable: boolean;
     default_value?: string | null;
     description?: string | null;
     example?: string | null;
@@ -68,6 +69,7 @@ export interface ResponseParam {
     name: string;
     type: ParamType;
     required: boolean;
+    nullable: boolean;
     description?: string | null;
     example?: string | null;
     array_child_type?: ParamType | null;
@@ -97,6 +99,7 @@ export interface RequestParamDraft {
     location: ParamLocation | string;
     type: ParamType;
     required: boolean;
+    nullable: boolean;
     default_value?: string | null;
     description?: string | null;
     example?: string | null;
@@ -112,6 +115,7 @@ export interface ResponseParamDraft {
     name: string;
     type: ParamType;
     required: boolean;
+    nullable: boolean;
     description?: string | null;
     example?: string | null;
     array_child_type?: ParamType | null;
@@ -232,6 +236,7 @@ export interface ApiReqParamInput {
     type: ParamType;
     location?: ParamLocation; // 顶层必填，子参数继承
     required?: boolean;
+    nullable?: boolean;
     default_value?: string | null;
     description?: string | null;
     example?: string | null;
@@ -244,6 +249,7 @@ export interface ApiRespParamInput {
     name: string;
     type: ParamType;
     required?: boolean;
+    nullable?: boolean;
     description?: string | null;
     example?: string | null;
     array_child_type?: ParamType | null;
