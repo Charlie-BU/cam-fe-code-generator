@@ -45,6 +45,30 @@ const tsTypeMap = (type: string, arrayChildType?: string | null): string => {
 const formatInterfaceFieldName = (name: string): string =>
     name.includes("-") ? JSON.stringify(name) : name;
 
+const getParamStructureKey = (param: any): string => {
+    const typeKey =
+        param.type === "array"
+            ? `array:${param.array_child_type || ""}`
+            : param.type;
+    if (
+        param.type !== "object" &&
+        !(param.type === "array" && param.array_child_type === "object")
+    ) {
+        return typeKey;
+    }
+    const children = Array.isArray(param.children_params)
+        ? param.children_params
+        : [];
+    const childShape = children
+        .map(
+            (child: any) =>
+                `${child.name}:${getParamStructureKey(child)}:${child.required}:${child.nullable}`
+        )
+        .sort()
+        .join(",");
+    return `${typeKey}:{${childShape}}`;
+};
+
 const generateInterface = (
     name: string,
     params: any[],
@@ -62,24 +86,51 @@ const generateInterface = (
     });
 
     paramsByName.forEach((variants, fieldName) => {
+        const seenStructures = new Set<string>();
+        const uniqueVariants = variants.filter((param) => {
+            const structureKey = getParamStructureKey(param);
+            if (seenStructures.has(structureKey)) return false;
+            seenStructures.add(structureKey);
+            return true;
+        });
         const formattedFieldName = formatInterfaceFieldName(fieldName);
         const isOptional = !variants[0].required;
         // 前端会限制冲突数据；这里仍以第一个非空说明兜底，以兼容历史数据。
-        const description = variants.find((param) => param.description)?.description;
+        const description = variants.find(
+            (param) =>
+                typeof param.description === "string" &&
+                param.description.trim() !== ""
+        )?.description;
         const comment = description ? `  /** ${description} */\n` : "";
         const types: string[] = [];
+        const objectVariantCount = uniqueVariants.filter(
+            (param) => param.type === "object"
+        ).length;
+        const arrayObjectVariantCount = uniqueVariants.filter(
+            (param) =>
+                param.type === "array" && param.array_child_type === "object"
+        ).length;
+        let objectVariantIndex = 0;
+        let arrayObjectVariantIndex = 0;
 
-        variants.forEach((param) => {
+        uniqueVariants.forEach((param) => {
             let type = tsTypeMap(param.type, param.array_child_type);
             const children = param.children_params || [];
             if (param.type === "object" && children.length > 0) {
+                objectVariantIndex += 1;
+                const variantSuffix =
+                    objectVariantCount > 1 ? objectVariantIndex : "";
                 const childInterfaceName = `${interfaceName}${capitalizeFirstLetter(
                     fieldName
-                )}`;
+                )}${variantSuffix}`;
                 type = childInterfaceName;
                 if (!types.includes(type)) {
                     interfaces.push(
-                        ...generateInterface(childInterfaceName, children, interfaceName)
+                        ...generateInterface(
+                            childInterfaceName,
+                            children,
+                            interfaceName
+                        )
                     );
                 }
             } else if (
@@ -87,13 +138,22 @@ const generateInterface = (
                 param.array_child_type === "object" &&
                 children.length > 0
             ) {
+                arrayObjectVariantIndex += 1;
+                const variantSuffix =
+                    arrayObjectVariantCount > 1
+                        ? arrayObjectVariantIndex
+                        : "";
                 const childInterfaceName = `${interfaceName}${capitalizeFirstLetter(
                     fieldName
-                )}Item`;
+                )}${variantSuffix}Item`;
                 type = `${childInterfaceName}[]`;
                 if (!types.includes(type)) {
                     interfaces.push(
-                        ...generateInterface(childInterfaceName, children, interfaceName)
+                        ...generateInterface(
+                            childInterfaceName,
+                            children,
+                            interfaceName
+                        )
                     );
                 }
             }
@@ -110,9 +170,7 @@ const generateInterface = (
     const currentInterface = `export interface ${interfaceName} {\n${fields.join(
         "\n"
     )}\n}`;
-    interfaces.push(currentInterface);
-
-    return interfaces;
+    return [currentInterface, ...interfaces];
 };
 
 export const generateTSCode = (
