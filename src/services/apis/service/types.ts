@@ -74,10 +74,6 @@ export interface ServiceListResponse extends BaseResponse {
     total: number;
 }
 
-export interface GetServiceByIdResponse extends BaseResponse {
-    service: ServiceDetail;
-}
-
 export interface GetServiceByUuidAndVersionResponse extends BaseResponse {
     service: ServiceDetail | ServiceIterationDetail;
     is_latest: boolean;
