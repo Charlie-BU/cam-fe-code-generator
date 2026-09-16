@@ -45,6 +45,10 @@ const tsTypeMap = (type: string, arrayChildType?: string | null): string => {
 const formatInterfaceFieldName = (name: string): string =>
     name.includes("-") ? JSON.stringify(name) : name;
 
+const getUniqueParamNames = (
+    params?: readonly { name: string }[]
+): string[] => Array.from(new Set((params || []).map((param) => param.name)));
+
 const getParamStructureKey = (param: any): string => {
     const typeKey =
         param.type === "array"
@@ -264,21 +268,21 @@ export const generateTSCode = (
         reqHeaderInterfaceName,
         reqCookieInterfaceName,
         respInterfaceNames,
-        reqBodyFields:
-            api.request_params_by_location?.body.map((param) => param.name) ||
-            [],
-        reqQueryFields:
-            api.request_params_by_location?.query.map((param) => param.name) ||
-            [],
-        reqPathFields:
-            api.request_params_by_location?.path.map((param) => param.name) ||
-            [],
-        reqHeaderFields:
-            api.request_params_by_location?.header.map((param) => param.name) ||
-            [],
-        reqCookieFields:
-            api.request_params_by_location?.cookie.map((param) => param.name) ||
-            [],
+        reqBodyFields: getUniqueParamNames(
+            api.request_params_by_location?.body
+        ),
+        reqQueryFields: getUniqueParamNames(
+            api.request_params_by_location?.query
+        ),
+        reqPathFields: getUniqueParamNames(
+            api.request_params_by_location?.path
+        ),
+        reqHeaderFields: getUniqueParamNames(
+            api.request_params_by_location?.header
+        ),
+        reqCookieFields: getUniqueParamNames(
+            api.request_params_by_location?.cookie
+        ),
     };
 
     return {

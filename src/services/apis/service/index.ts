@@ -2,7 +2,6 @@
 import { api } from "../../../request";
 import type {
     ServiceListResponse,
-    GetServiceByIdResponse,
     GetServiceByUuidAndVersionResponse,
     GetAllVersionsByUuidResponse,
     CreateNewServiceRequest,
@@ -59,11 +58,6 @@ export const GetHisNewestServicesByOwnerId = async (
         `${prefix}/getHisNewestServicesByOwnerId`,
         { page_size, current_page, is_my_services: false, owner_id }
     );
-};
-
-// 通过服务id获取服务详情
-export const GetServiceById = async (id: number) => {
-    return api.get<GetServiceByIdResponse>(`${prefix}/getServiceById`, { id });
 };
 
 // 通过 service_uuid 和 version 获取服务详情
