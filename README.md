@@ -31,6 +31,10 @@ cam add user-service:team/user/service@latest
 
 # 4. 拉取接口定义并生成代码
 cam update
+
+# 只拉取当前项目中一个已添加服务的最新代码（名称或 UUID）
+cam update user-service
+cam update team/user/service
 ```
 
 `cam add` 的格式为 `名称:service_uuid@版本`：
@@ -59,7 +63,11 @@ cam remove user-service    # 从当前项目配置中移除服务并重新生成
 }
 ```
 
-运行 `cam update`（以及成功的 `cam add` / `cam remove`）会清空并重建 `outDir`，因此不要在生成目录中手写业务代码。每个已配置服务会生成：
+运行 `cam update`（以及成功的 `cam add` / `cam remove`）会清空并重建 `outDir`，因此不要在生成目录中手写业务代码。
+
+`cam update <服务名称或 UUID>` 只请求该服务的 `latest` 版本并重建该服务子目录，不拉取其他服务，不修改其他服务产物或 `request-demo.ts`，也不改写 `cam.config.json` 的版本设置。未添加的服务会报错；无参数的 `cam update` 仍按配置版本更新全部服务。
+
+每个已配置服务会生成：
 
 ```text
 src/cam-auto-generate/
@@ -123,7 +131,7 @@ npm publish
 - CLI 命令注册在 `src/cli/`，远端调用放在 `src/services/apis/`，生成逻辑放在 `src/services/code-generate/`。
 - 类型映射和模板改动必须以 CAM 后端的参数模型为准，特别关注嵌套 object、object 数组、可选字段与历史版本草稿。
 - 不要编辑生成目录作为修复手段；应修改模板或生成器并重新运行 `cam update`。
-- 当前 `test` 脚本尚未提供自动化测试；拆库后建议优先为命令解析、参数树类型生成和端到端拉取流程补齐测试。
+- 运行 `npm test` 构建并执行更新命令回归测试，覆盖名称/UUID 选择、服务隔离、全量更新兼容性与拉取失败处理。
 
 ## 许可证
 

@@ -100,8 +100,8 @@ export const removeService = async (serviceName: string) => {
     }
 };
 
-// 入口：基于cam.config.json中存储的service信息，拉取全部service的全部api
-export const pullAllApisInAllServices = async () => {
+// 未指定服务时按配置拉取全部服务；指定名称或 UUID 时仅拉取该服务的 latest。
+export const pullAllApisInAllServices = async (serviceIdentifier?: string) => {
     const config = readConfig();
     if (!config.services || Object.keys(config.services).length === 0) {
         console.warn(
@@ -109,9 +109,24 @@ export const pullAllApisInAllServices = async () => {
         );
         process.exit(1);
     }
-    // 清空cam-auto-generate目录下的所有文件
+    let services = Object.entries(config.services);
+    const isSingleService = serviceIdentifier !== undefined;
+    if (isSingleService) {
+        // 优先匹配项目中配置的名称，其次匹配 UUID。
+        const namedService = services.find(([name]) => name === serviceIdentifier);
+        services = namedService ? [namedService] : services.filter(([, value]) =>
+            typeof value === "string" && value.split("@")[0] === serviceIdentifier
+        );
+        if (services.length !== 1) {
+            console.warn(`Service "${serviceIdentifier}" was not found uniquely in cam.config.json. Use an added service name or UUID.`);
+            process.exitCode = 1;
+            return;
+        }
+    }
+
+    // 单服务更新不得清空其他服务的产物。
     const outDir = config.outDir || ".";
-    if (fs.existsSync(outDir)) {
+    if (!isSingleService && fs.existsSync(outDir)) {
         // 递归删除整个目录及其内容
         fs.rmSync(outDir, { recursive: true, force: true });
     }
@@ -119,12 +134,16 @@ export const pullAllApisInAllServices = async () => {
     fs.mkdirSync(outDir, { recursive: true });
 
     // 遍历cam.config.json中存储的service信息，拉取全部service的全部api
-    for (const [name, UuidAndVersion] of Object.entries(config.services)) {
+    for (const [name, UuidAndVersion] of services) {
         const [service_uuid, version] = (UuidAndVersion as string).split("@");
         if (!service_uuid || !version) {
             console.warn(
                 `Invalid service info ${UuidAndVersion} for service ${name}. Please use 'cam add <name:uuid@version>' to add instead.`
             );
+            if (isSingleService) {
+                process.exitCode = 1;
+                return;
+            }
             continue;
         }
 
@@ -140,12 +159,16 @@ export const pullAllApisInAllServices = async () => {
         try {
             const serviceRes = await GetServiceByUuidAndVersion(
                 service_uuid,
-                version
+                isSingleService ? "latest" : version
             );
             if (serviceRes.status !== 200) {
                 console.warn(
                     `Failed to get service info for service ${name}: ${serviceRes.message}`
                 );
+                if (isSingleService) {
+                    process.exitCode = 1;
+                    return;
+                }
                 continue;
             }
             const apis =
@@ -166,6 +189,10 @@ export const pullAllApisInAllServices = async () => {
                     console.warn(
                         `Failed to get api info for api ${api.name} in service ${name}: ${apiRes.message}`
                     );
+                    if (isSingleService) {
+                        process.exitCode = 1;
+                        return;
+                    }
                     continue;
                 }
                 const apiDetail = apiRes.api as ApiDetail | ApiDraftDetail;
@@ -180,9 +207,18 @@ export const pullAllApisInAllServices = async () => {
             console.error(
                 `Failed to get service info for service ${name}: ${error}`
             );
+            if (isSingleService) {
+                process.exitCode = 1;
+                return;
+            }
             continue;
         }
 
+        // 拉取成功后才清理目标服务目录。
+        if (isSingleService) {
+            fs.rmSync(outputDir, { recursive: true, force: true });
+            fs.mkdirSync(outputDir, { recursive: true });
+        }
         // 统一生成namespaces.ts
         fs.writeFileSync(
             path.join(outputDir, "namespaces.ts"),
@@ -193,6 +229,11 @@ export const pullAllApisInAllServices = async () => {
             `${autoGeneratePrefix}\n${serviceClassCode(name, apiOptions)}`
         );
         fs.writeFileSync(path.join(outputDir, "index.ts"), code);
+    }
+
+    if (isSingleService) {
+        console.log(`Service ${services[0]![0]}'s apis have been generated in ${outDir}.`);
+        return;
     }
 
     // 生成request-demo.ts（已格式化）
